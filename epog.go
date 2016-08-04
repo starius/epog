@@ -14,6 +14,7 @@ import (
     "net/url"
     "time"
 
+    "github.com/polvi/sni"
     "golang.org/x/net/proxy"
 )
 
@@ -55,7 +56,7 @@ func netCopy(from, to net.Conn, finished chan<- struct{}) {
 
 func processRequest(clientConn net.Conn) {
     defer clientConn.Close()
-    hostname, prefix, err := readSni(clientConn)
+    hostname, clientConn, err := sni.ServerNameFromConn(clientConn)
     if err != nil {
         log.Printf("Unable to get target server name from SNI: %s", err)
         return
@@ -73,9 +74,6 @@ func processRequest(clientConn net.Conn) {
         return
     }
     defer serverConn.Close()
-    // write prefix (already read for SNI) to server
-    serverConn.SetWriteDeadline(time.Now().Add(time.Duration(10e9)))
-    serverConn.Write(prefix)
     finished := make(chan struct{})
     go netCopy(clientConn, serverConn, finished)
     go netCopy(serverConn, clientConn, finished)
