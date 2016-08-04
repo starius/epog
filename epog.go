@@ -47,8 +47,13 @@ func netCopy(from, to net.Conn, finished chan<- struct{}) {
 
 func processRequest(clientConn net.Conn) {
     defer clientConn.Close()
+    hostname, prefix, err := readSni(clientConn)
+    if err != nil {
+        log.Printf("Unable to get target server name from SNI: %s", err)
+        return
+    }
     proxyUrl := "socks5://127.0.0.1:9150"
-    targetServer := "redjohn.tk:4218"
+    targetServer := hostname + ":4218"
     serverConn, err := connectToProxy(proxyUrl, targetServer)
     if err != nil {
         log.Printf(
@@ -60,6 +65,9 @@ func processRequest(clientConn net.Conn) {
         return
     }
     defer serverConn.Close()
+    // write prefix (already read for SNI) to server
+    serverConn.SetWriteDeadline(time.Now().Add(time.Duration(10e9)))
+    serverConn.Write(prefix)
     finished := make(chan struct{})
     go netCopy(clientConn, serverConn, finished)
     go netCopy(serverConn, clientConn, finished)
