@@ -1,5 +1,13 @@
 package main
 
+/*  Entry Proxy for Onion Gateway
+
+See also:
+
+  * https://github.com/DonnchaC/oniongateway/blob/master/docs/design.rst#32-entry-proxy
+  * https://habrahabr.ru/post/142527/
+*/
+
 import (
     "log"
     "net"
