@@ -10,19 +10,26 @@ See also:
 */
 
 import (
+    "flag"
     "log"
     "net"
     "net/url"
+    "strconv"
     "time"
 
     "github.com/polvi/sni"
     "golang.org/x/net/proxy"
 )
 
-const BUFFER_SIZE = 1024
+var (
+    proxyUrl = flag.String("proxy", "socks5://127.0.0.1:9150", "Proxy URL")
+    listenOn = flag.String("listen-on", "127.0.0.1:4218", "Where to listen")
+    onionPort = flag.Int("onion-port", 4218, "Port on onion site to use")
+    bufferSize = flag.Int("buffer-size", 1024, "Proxy buffer size, bytes")
+)
 
-func connectToProxy(proxyUrl, targetServer string) (net.Conn, error) {
-    parsedUrl, err := url.Parse(proxyUrl)
+func connectToProxy(targetServer string) (net.Conn, error) {
+    parsedUrl, err := url.Parse(*proxyUrl)
     if err != nil {
         return nil, err
     }
@@ -38,7 +45,7 @@ func netCopy(from, to net.Conn, finished chan<- struct{}) {
     defer func() {
         finished<-struct{}{}
     }()
-    buffer := make([]byte, BUFFER_SIZE)
+    buffer := make([]byte, *bufferSize)
     for {
         from.SetReadDeadline(time.Now().Add(time.Duration(10e9)))
         bytesRead, err := from.Read(buffer)
@@ -62,20 +69,19 @@ func processRequest(clientConn net.Conn) {
         log.Printf("Unable to get target server name from SNI: %s", err)
         return
     }
-    proxyUrl := "socks5://127.0.0.1:9150"
     onion, err := resolveToOnion(hostname)
     if err != nil {
         log.Printf("Unable to resolve %s using DNS TXT: %s", hostname, err)
         return
     }
     log.Printf("%s was resolved to %s", hostname, onion)
-    targetServer := onion + ":4218"
-    serverConn, err := connectToProxy(proxyUrl, targetServer)
+    targetServer := net.JoinHostPort(onion, strconv.Itoa(*onionPort))
+    serverConn, err := connectToProxy(targetServer)
     if err != nil {
         log.Printf(
             "Unable to connect to %s through %s: %s\n",
             targetServer,
-            proxyUrl,
+            *proxyUrl,
             err,
         )
         return
@@ -89,10 +95,10 @@ func processRequest(clientConn net.Conn) {
 }
 
 func main() {
-    listenOn := "127.0.0.1:4218"
-    listener, err := net.Listen("tcp", listenOn)
+    flag.Parse()
+    listener, err := net.Listen("tcp", *listenOn)
     if err != nil {
-        log.Fatal("Unable to listen on %s: %s", listenOn, err)
+        log.Fatal("Unable to listen on %s: %s", *listenOn, err)
     }
     for {
         conn, err := listener.Accept()
