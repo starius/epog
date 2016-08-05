@@ -5,7 +5,8 @@ package main
 See also:
 
   * https://github.com/DonnchaC/oniongateway/blob/master/docs/design.rst#32-entry-proxy
-  * https://habrahabr.ru/post/142527/
+  * https://gist.github.com/Yawning/bac58e08a05fc378a8cc (SOCKS5 client, Tor)
+  * https://habrahabr.ru/post/142527/ (TCP proxy)
 */
 
 import (
