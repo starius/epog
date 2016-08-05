@@ -3,7 +3,6 @@ package main
 import (
     "errors"
     "fmt"
-    "math/rand"
     "net"
     "regexp"
 )
@@ -27,12 +26,10 @@ func resolveToOnion(hostname string) (onion string, err error) {
         err = errors.New(fmt.Sprintf("No TXT records for %s", hostname))
         return
     }
-    for i, _ := range rand.Perm(len(txts)) {
-        txt := txts[i]
-        matches := onionTxtRe.FindAllStringSubmatch(txt, -1)
-        if len(matches) != 0 {
-            j := rand.Intn(len(matches))
-            return matches[j][SUBMATCH_OF_INTEREST], nil
+    for _, txt := range txts {
+        match := onionTxtRe.FindStringSubmatch(txt)
+        if match != nil {
+            return match[SUBMATCH_OF_INTEREST], nil
         }
     }
     return "", errors.New(fmt.Sprintf("No suitable TXT records for %s", hostname))
