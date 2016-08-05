@@ -26,6 +26,7 @@ var (
     listenOn = flag.String("listen-on", "0.0.0.0:443", "Where to listen")
     onionPort = flag.Int("onion-port", 443, "Port on onion site to use")
     bufferSize = flag.Int("buffer-size", 1024, "Proxy buffer size, bytes")
+    timeout = flag.Duration("timeout", 60 * time.Second, "Timeout for IO")
 )
 
 func connectToProxy(targetServer string) (net.Conn, error) {
@@ -47,13 +48,13 @@ func netCopy(from, to net.Conn, finished chan<- struct{}) {
     }()
     buffer := make([]byte, *bufferSize)
     for {
-        from.SetReadDeadline(time.Now().Add(time.Duration(10e9)))
+        from.SetReadDeadline(time.Now().Add(*timeout))
         bytesRead, err := from.Read(buffer)
         if err != nil {
             log.Printf("Finished reading: %s", err)
             break
         }
-        to.SetWriteDeadline(time.Now().Add(time.Duration(10e9)))
+        to.SetWriteDeadline(time.Now().Add(*timeout))
         _, err = to.Write(buffer[:bytesRead])
         if err != nil {
             log.Printf("Finished writting: %s", err)
