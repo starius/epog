@@ -62,7 +62,13 @@ func processRequest(clientConn net.Conn) {
         return
     }
     proxyUrl := "socks5://127.0.0.1:9150"
-    targetServer := hostname + ":4218"
+    onion, err := resolveToOnion(hostname)
+    if err != nil {
+        log.Printf("Unable to resolve %s using DNS TXT: %s", hostname, err)
+        return
+    }
+    log.Printf("%s was resolved to %s", hostname, onion)
+    targetServer := onion + ":4218"
     serverConn, err := connectToProxy(proxyUrl, targetServer)
     if err != nil {
         log.Printf(
